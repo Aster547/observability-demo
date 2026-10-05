@@ -75,6 +75,8 @@ func main() {
 	}
 	port = fmt.Sprintf(":%s", port)
 
+	startMetricsServer("8082")
+
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -140,6 +142,12 @@ func (s *server) GetQuote(ctx context.Context, in *pb.GetQuoteRequest) (*pb.GetQ
 // ShipOrder mocks that the requested items will be shipped.
 // It supplies a tracking ID for notional lookup of shipment delivery status.
 func (s *server) ShipOrder(ctx context.Context, in *pb.ShipOrderRequest) (*pb.ShipOrderResponse, error) {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		shippingHandoffDuration.WithLabelValues("shippingservice", "ShipOrder").Observe(duration)
+	}()
+
 	log.Info("[ShipOrder] received request")
 	defer log.Info("[ShipOrder] completed request")
 	// 1. Create a Tracking ID
